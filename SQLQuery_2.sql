@@ -1,0 +1,167 @@
+Select *
+From [Portfolio Project].dbo.[Nashville Housing]
+
+--Standardize Sale Date
+
+Select SaleDate, CONVERT(Date,SaleDate)
+From [Portfolio Project].dbo.[Nashville Housing]
+
+--Populate Property Address Data - There are duplicate rows with the same Parcel ID Number but one of the rows 
+--does not have an address. We are joining the table where the ParcelID's are the same but differ in the 
+--Unique ID. We are then using Update function to find where one Property Address is null and filling in
+--what is populated in the other Parcel ID row.
+
+SELECT *
+From [Portfolio Project].dbo.[Nashville Housing]
+--Where PropertyAddress is null
+Order by ParcelID
+
+SELECT a.ParcelID, a.PropertyAddress, b.ParcelID, b.PropertyAddress, ISNULL(a.PropertyAddress,b.PropertyAddress)
+From [Portfolio Project].dbo.[Nashville Housing] a
+JOIN [Portfolio Project].dbo.[Nashville Housing] b 
+    on a.ParcelID = b.ParcelID
+    AND a.UniqueID <> b.UniqueID
+Where a.PropertyAddress is null 
+
+UPDATE a 
+SET PropertyAddress = ISNULL(a.PropertyAddress,b.PropertyAddress)
+From [Portfolio Project].dbo.[Nashville Housing] a
+JOIN [Portfolio Project].dbo.[Nashville Housing] b 
+    on a.ParcelID = b.ParcelID
+    AND a.UniqueID <> b.UniqueID
+Where a.PropertyAddress is null
+
+
+--Breaking out Property Address into Individual Columns (Address, City, State)
+
+--The 1 in the code below indicates position 1. The negative 1 is moving the position back 1 spot- removing the 
+--comma from the Address column. Len is the length of the Property Address field
+
+
+SELECT
+SUBSTRING(PropertyAddress, 1, CHARINDEX(',', PropertyAddress) -1) as Address
+, SUBSTRING(PropertyAddress, CHARINDEX(',', PropertyAddress) +1 , Len(PropertyAddress)) as City
+
+From [Portfolio Project].dbo.[Nashville Housing]
+
+
+--Adding new Columns 
+
+
+Alter TABLE [Portfolio Project].dbo.[Nashville Housing]
+    Add PropertySplitAddress nvarchar(255)
+
+UPDATE [Portfolio Project].dbo.[Nashville Housing]
+    SET PropertySplitAddress = SUBSTRING(PropertyAddress, 1, CHARINDEX(',', PropertyAddress) -1)
+
+Alter TABLE [Portfolio Project].dbo.[Nashville Housing]
+    Add PropertySplitCity nvarchar(255)
+
+UPDATE [Portfolio Project].dbo.[Nashville Housing]
+    SET PropertySplitCity = SUBSTRING(PropertyAddress, CHARINDEX(',', PropertyAddress) +1 , Len(PropertyAddress))
+
+
+-----------------------------
+
+
+Select OwnerAddress
+From [Portfolio Project].dbo.[Nashville Housing]
+
+Select
+PARSENAME(Replace(OwnerAddress, ',', '.'), 3)
+,PARSENAME(Replace(OwnerAddress, ',', '.'), 2)
+,PARSENAME(Replace(OwnerAddress, ',', '.'), 1)
+From [Portfolio Project].dbo.[Nashville Housing]
+
+
+
+
+Alter TABLE [Portfolio Project].dbo.[Nashville Housing]
+    Add OwnerSplitAddress nvarchar(255)
+
+UPDATE [Portfolio Project].dbo.[Nashville Housing]
+    SET OwnerSplitAddress = PARSENAME(Replace(OwnerAddress, ',', '.'), 3)
+
+Alter TABLE [Portfolio Project].dbo.[Nashville Housing]
+    Add OwnerSplitCity nvarchar(255)
+
+UPDATE [Portfolio Project].dbo.[Nashville Housing]
+    SET OwnerSplitCity = PARSENAME(Replace(OwnerAddress, ',', '.'), 2)
+
+Alter TABLE [Portfolio Project].dbo.[Nashville Housing]
+    Add OwnerSplitState nvarchar(255)
+
+UPDATE [Portfolio Project].dbo.[Nashville Housing]
+    SET OwnerSplitState = PARSENAME(Replace(OwnerAddress, ',', '.'), 1)
+
+Select *
+From [Portfolio Project].dbo.[Nashville Housing]
+
+---Change Y and N to Yes and No in "Sold as Vacant" field
+
+Select Distinct(SoldAsVacant), Count(SoldAsVacant)
+From [Portfolio Project].dbo.[Nashville Housing]
+Group by SoldAsVacant
+Order by 2
+
+Select SoldAsVacant
+,    CASE When SoldAsVacant = 'Y' THEN 'Yes'
+          When SoldAsVacant = 'N' THEN 'No'
+          Else SoldAsVacant
+          END
+From [Portfolio Project].dbo.[Nashville Housing]
+
+Update [Nashville Housing]
+SET SoldAsVacant = CASE When SoldAsVacant = 'Y' THEN 'Yes'
+          When SoldAsVacant = 'N' THEN 'No'
+          Else SoldAsVacant
+          END
+
+
+-----Removing Duplicates
+
+WITH RowNumCTE AS(
+Select *,
+Row_Number() OVER (
+    PARTITION BY ParcelID,
+    PropertyAddress,
+    SalePrice,
+    SaleDate,
+    LegalReference
+    ORDER BY 
+    UniqueID
+    ) row_num 
+From [Portfolio Project].dbo.[Nashville Housing]
+)
+DELETE 
+From RowNumCTE
+Where row_num > 1
+--Order by PropertyAddress
+
+
+WITH RowNumCTE AS(
+Select *,
+Row_Number() OVER (
+    PARTITION BY ParcelID,
+    PropertyAddress,
+    SalePrice,
+    SaleDate,
+    LegalReference
+    ORDER BY 
+    UniqueID
+    ) row_num 
+From [Portfolio Project].dbo.[Nashville Housing]
+)
+SELECT *
+From RowNumCTE
+Where row_num > 1
+Order by PropertyAddress
+
+
+----Delete Unused Columns
+
+Select *
+From [Portfolio Project].dbo.[Nashville Housing]
+
+ALTER TABLE [Portfolio Project].dbo.[Nashville Housing]
+DROP COLUMN OwnerAddress, TaxDistrict, PropertyAddress

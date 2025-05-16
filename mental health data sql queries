@@ -1,0 +1,64 @@
+Select *
+From [Portfolio Project].dbo.[Screen Time and Mental Health]
+
+--Daily screen hours by age groups - using Case statement to group by age group 
+
+Select ROUND(Avg(daily_screen_time_hours),2) as avg_daily_screen_time,
+CASE
+    WHEN Age BETWEEN 13 AND 17 THEN 'Teenagers'
+    WHEN Age BETWEEN 18 AND 21 THEN '18-21'
+    WHEN Age BETWEEN 22 AND 25 THEN '22-25'
+    WHEN Age BETWEEN 26 AND 30 THEN '26-30'
+    WHEN Age BETWEEN 31 AND 35 THEN '31-35'
+    WHEN AGE BETWEEN 36 AND 40 THEN '36-40'
+    WHEN Age BETWEEN 41 AND 45 THEN '41-45'
+    WHEN Age BETWEEN 46 AND 50 THEN '46-50'
+    WHEN AGE > 50 THEN 'Over 50'
+END AS 'age_group'
+From [Portfolio Project].dbo.[Screen Time and Mental Health]
+Group by
+CASE
+    WHEN Age BETWEEN 13 AND 17 THEN 'Teenagers'
+    WHEN Age BETWEEN 18 AND 21 THEN '18-21'
+    WHEN Age BETWEEN 22 AND 25 THEN '22-25'
+    WHEN Age BETWEEN 26 AND 30 THEN '26-30'
+    WHEN Age BETWEEN 31 AND 35 THEN '31-35'
+    WHEN AGE BETWEEN 36 AND 40 THEN '36-40'
+    WHEN Age BETWEEN 41 AND 45 THEN '41-45'
+    WHEN Age BETWEEN 46 AND 50 THEN '46-50'
+    WHEN AGE > 50 THEN 'Over 50'
+END
+Order by avg_daily_screen_time DESC
+
+
+--Using aggregate - group by, where statement - For those younger than 30 showing avg screen time, caffeine intake, anxiety score
+
+Select age, Round(Avg(daily_screen_time_hours),2) as avg_screen_time_hours, Round(Avg(caffeine_intake_mg_per_day),2) as caffeine_per_day, Round(Avg(weekly_anxiety_score),2) as avg_anxiety_score, COUNT(user_id) as 'number_of_users'
+From [Portfolio Project].dbo.[Screen Time and Mental Health]
+Where age < 30
+Group by age
+Order by avg_anxiety_score DESC
+
+--Using join statement to combine data from seperate datasets. Comparing daily screen time hours with work location and stress level
+
+Select *
+From [Portfolio Project].dbo.[Screen Time and Mental Health] screen
+Join [Portfolio Project].dbo.Remote_Work_on_Mental_Health remote
+    On screen.age= remote.age 
+
+Select screen.age, screen.daily_screen_time_hours, screen.weekly_anxiety_score, remote.work_location, remote.stress_level
+From [Portfolio Project].dbo.[Screen Time and Mental Health] screen
+Join [Portfolio Project].dbo.Remote_Work_on_Mental_Health remote
+    On screen.age= remote.age
+Order by daily_screen_time_hours DESC
+
+
+---Update table
+
+Select *
+From [Portfolio Project].dbo.Remote_Work_on_Mental_Health 
+
+UPDATE [Portfolio Project].dbo.Remote_Work_on_Mental_Health
+SET Sleep_Quality = 'Mid'
+WHERE Sleep_Quality = 'Average'
+
